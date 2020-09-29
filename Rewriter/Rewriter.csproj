@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GenerateLambdaRoslyn\GenerateLambdaRoslyn.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Mono.Cecil">
+      <HintPath>..\..\cecil\bin\Debug\netstandard2.0\Mono.Cecil.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <!--<ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.11.2" />
+  </ItemGroup>-->
+</Project>

@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30413.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rewriter", "Rewriter.csproj", "{CDFB0D7A-1B6B-46C1-BF99-4A7F6F252F7B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CDFB0D7A-1B6B-46C1-BF99-4A7F6F252F7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDFB0D7A-1B6B-46C1-BF99-4A7F6F252F7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDFB0D7A-1B6B-46C1-BF99-4A7F6F252F7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDFB0D7A-1B6B-46C1-BF99-4A7F6F252F7B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6036CEB8-4776-4746-B85C-D9EABBB245F7}
+	EndGlobalSection
+EndGlobal
