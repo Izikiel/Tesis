@@ -9,18 +9,25 @@ using Xunit;
 using Xunit.Abstractions;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
 
 namespace test
 {
     public class Program
     {
-        ITestOutputHelper output;
+        //ITestOutputHelper output;
 
-        public Program(ITestOutputHelper output)
-        {
-            this.output = output;
-        }
+        //public Program(ITestOutputHelper output)
+        //{
+        //    this.output = output;
+        //}
 
+
+        //public static void Main()
+        //{
+        //    Debugger.Break();
+        //    Console.WriteLine("hola!");
+        //}
 
         [Fact]
         public static async Task GreetTest()
@@ -40,32 +47,32 @@ namespace test
         }
 
 
-        [Fact]
-        public void CoyoteGreeterTest()
-        {
-            Func<Task> toRun = () => GreetTest();
-            var configuration = Configuration.Create().WithTestingIterations(1000).WithRandomStrategy();
-            var testingEngine = TestingEngine.Create(configuration, toRun);
-            testingEngine.Run();
+        //[Fact]
+        //public void CoyoteGreeterTest()
+        //{
+        //    Func<Task> toRun = () => GreetTest();
+        //    var configuration = Configuration.Create().WithTestingIterations(1000).WithRandomStrategy();
+        //    var testingEngine = TestingEngine.Create(configuration, toRun);
+        //    testingEngine.Run();
 
-            var report = testingEngine.TestReport; 
-            if (report.BugReports.Count > 0) 
-            { 
-                this.output.WriteLine("Found {0} bugs", report.BugReports.Count); 
-                foreach (var r in report.BugReports) 
-                { 
-                    this.output.WriteLine(r); 
-                } 
-                Assert.True(false, "Test failed"); 
-            } 
- 
-            this.output.WriteLine("Test passed");
-        }
+        //    var report = testingEngine.TestReport; 
+        //    if (report.BugReports.Count > 0) 
+        //    { 
+        //        this.output.WriteLine("Found {0} bugs", report.BugReports.Count); 
+        //        foreach (var r in report.BugReports) 
+        //        { 
+        //            this.output.WriteLine(r); 
+        //        } 
+        //        Assert.True(false, "Test failed"); 
+        //    } 
+
+        //    this.output.WriteLine("Test passed");
+        //}
 
         [Theory]
-        [InlineData(3,4)]
-        [InlineData(3,0)]
-        [InlineData(0,1)]
+        [InlineData(3, 4)]
+        [InlineData(3, 0)]
+        [InlineData(0, 1)]
         public static async Task GreetTestTheory(int hello, int goodMorning)
         {
             var greeter = new Greeter();
@@ -87,87 +94,88 @@ namespace test
             Console.WriteLine(greeter.Value);
 
             Assert.True(greeter.Value == Greeter.HelloWorld, $"Value is '{greeter.Value}' instead of '{Greeter.HelloWorld}'.");
+            Assert.True(false, "Estoy en la interna!");
         }
 
 
-        [Theory]
-        [InlineData(3, 4)]
-        [InlineData(3, 0)]
-        [InlineData(0, 1)]
-        public void CoyoteGreeterTestTheory(int hello, int goodMorning)
-        {
-            Func<Task> toRun = () => GreetTestTheory(hello, goodMorning);
-            var configuration = Configuration.Create().WithTestingIterations(1000).WithRandomStrategy();
-            var testingEngine = TestingEngine.Create(configuration, toRun);
-            testingEngine.Run();
+        //[Theory]
+        //[InlineData(3, 4)]
+        //[InlineData(3, 0)]
+        //[InlineData(0, 1)]
+        //public void CoyoteGreeterTestTheory(int hello, int goodMorning)
+        //{
+        //    Func<Task> toRun = () => GreetTestTheory(hello, goodMorning);
+        //    var configuration = Configuration.Create().WithTestingIterations(1000).WithRandomStrategy();
+        //    var testingEngine = TestingEngine.Create(configuration, toRun);
+        //    testingEngine.Run();
 
-            var report = testingEngine.TestReport;
-            if (report.BugReports.Count > 0)
-            {
-                this.output.WriteLine("Found {0} bugs", report.BugReports.Count);
-                foreach (var r in report.BugReports)
-                {
-                    this.output.WriteLine(r);
-                }
-                Assert.True(false, "Test failed");
-            }
+        //    var report = testingEngine.TestReport;
+        //    if (report.BugReports.Count > 0)
+        //    {
+        //        this.output.WriteLine("Found {0} bugs", report.BugReports.Count);
+        //        foreach (var r in report.BugReports)
+        //        {
+        //            this.output.WriteLine(r);
+        //        }
+        //        Assert.True(false, "Test failed");
+        //    }
 
-            this.output.WriteLine("Test passed");
-        }
+        //    this.output.WriteLine("Test passed");
+        //}
 
-        [Theory]
-        [InlineData(3, 4)]
-        [InlineData(3, 0)]
-        [InlineData(0, 1)]
-        [InlineData("hola", "manola")]
-        public static async Task GenericGreetTestTheory<T>(T expected, T random)
-        {
-            var genericGreeter = new GenericGreeter<T>();
+        //[Theory]
+        //[InlineData(3, 4)]
+        //[InlineData(3, 0)]
+        //[InlineData(0, 1)]
+        //[InlineData("hola", "manola")]
+        //public static async Task GenericGreetTestTheory<T>(T expected, T random)
+        //{
+        //    var genericGreeter = new GenericGreeter<T>();
 
-            var tasks = new List<Task>();
+        //    var tasks = new List<Task>();
 
-            for (int i = 0; i < 10; i++)
-            {
-                tasks.Add(genericGreeter.Say(expected));
-            }
+        //    for (int i = 0; i < 10; i++)
+        //    {
+        //        tasks.Add(genericGreeter.Say(expected));
+        //    }
 
-            for (int i = 0; i < 2; i++)
-            {
-                tasks.Add(genericGreeter.Say(random));
-            }
+        //    for (int i = 0; i < 2; i++)
+        //    {
+        //        tasks.Add(genericGreeter.Say(random));
+        //    }
 
-            await Task.WhenAll(tasks);
+        //    await Task.WhenAll(tasks);
 
-            Console.WriteLine(genericGreeter.Value);
+        //    Console.WriteLine(genericGreeter.Value);
 
-            Assert.True(EqualityComparer<T>.Default.Equals(genericGreeter.Value, expected), $"Value is '{genericGreeter.Value}' instead of '{expected}'.");
-        }
+        //    Assert.True(EqualityComparer<T>.Default.Equals(genericGreeter.Value, expected), $"Value is '{genericGreeter.Value}' instead of '{expected}'.");
+        //}
 
-        [Theory]
-        [InlineData(3, 4)]
-        [InlineData(3, 0)]
-        [InlineData(0, 1)]
-        [InlineData("hola", "manola")]
-        public void CoyoteGenericGreetTestTheory<T>(T expected, T random)
-        {
-            Func<Task> toRun = () => GenericGreetTestTheory<T>(expected, random);
-            var configuration = Configuration.Create().WithTestingIterations(1000).WithRandomStrategy();
-            var testingEngine = TestingEngine.Create(configuration, toRun);
-            testingEngine.Run();
+        //[Theory]
+        //[InlineData(3, 4)]
+        //[InlineData(3, 0)]
+        //[InlineData(0, 1)]
+        //[InlineData("hola", "manola")]
+        //public void CoyoteGenericGreetTestTheory<T>(T expected, T random)
+        //{
+        //    Func<Task> toRun = () => GenericGreetTestTheory<T>(expected, random);
+        //    var configuration = Configuration.Create().WithTestingIterations(1000).WithRandomStrategy();
+        //    var testingEngine = TestingEngine.Create(configuration, toRun);
+        //    testingEngine.Run();
 
-            var report = testingEngine.TestReport;
-            if (report.BugReports.Count > 0)
-            {
-                this.output.WriteLine("Found {0} bugs", report.BugReports.Count);
-                foreach (var r in report.BugReports)
-                {
-                    this.output.WriteLine(r);
-                }
-                Assert.True(false, "Test failed");
-            }
+        //    var report = testingEngine.TestReport;
+        //    if (report.BugReports.Count > 0)
+        //    {
+        //        this.output.WriteLine("Found {0} bugs", report.BugReports.Count);
+        //        foreach (var r in report.BugReports)
+        //        {
+        //            this.output.WriteLine(r);
+        //        }
+        //        Assert.True(false, "Test failed");
+        //    }
 
-            this.output.WriteLine("Test passed");
-        }
+        //    this.output.WriteLine("Test passed");
+        //}
 
 
         class LogAdapter : TextWriter
