@@ -1,4 +1,5 @@
 ﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,7 @@ namespace Rewriter
 
         protected AssemblyDefinition TemplatesAssembly { get; }
 
-        protected HashSet<string> Transformed { get; set; } = new HashSet<string>();
+        protected static HashSet<string> Transformed { get; set; } = new HashSet<string>();
 
         public XunitTransformation(AssemblyDefinition assemblyDefinition)
         {
@@ -36,9 +37,11 @@ namespace Rewriter
                 .First(m => m.Name == this.TemplateMethodName);
         }
 
+        protected abstract void InjectLambdaIntoTemplate(MethodDefinition template, MethodDefinition method);
+
         protected bool DoesApply(MethodDefinition method)
         {
-            if (this.Transformed.Contains(method.Name) || !method.HasCustomAttributes)
+            if (XunitTransformation.Transformed.Contains(method.Name) || !method.HasCustomAttributes)
             {
                 return false;
             }
@@ -46,22 +49,102 @@ namespace Rewriter
             return method.CustomAttributes.Any(a => a.AttributeType.FullName == this.TestAttributeName);
         }
 
-        public abstract void Apply(MethodDefinition method);
-
-        protected object Transform(GenericInstanceMethod genericInstanceMethod, ModuleDefinition moduleDefinition)
+        public virtual void Apply(MethodDefinition method)
         {
-            var returnType = moduleDefinition.ImportReference(typeof(string[]));
-            var declaringType = moduleDefinition.ImportReference(genericInstanceMethod.DeclaringType);
-            return new object();
+            if (!this.DoesApply(method))
+            {
+                return;
+            }
+
+            var template = this.GetTemplateMethod();
+
+            var originalName = method.Name;
+            method.Name += "__inner";
+
+            template.Name = originalName;
+
+            var module = method.Module;
+
+            this.InjectLambdaIntoTemplate(template, method);
+
+            for (int i = 0; i < template.Parameters.Count; i++)
+            {
+                var param = template.Parameters[i];
+                param.ParameterType = Transform(param.ParameterType, method.Module);
+
+                if (param.HasCustomAttributes)
+                {
+                    for (int j = 0; j < param.CustomAttributes.Count; j++)
+                    {
+                        var customAttr = param.CustomAttributes[j];
+
+                        var ctorTypeReference = module.ImportReference(Type.GetType(customAttr.AttributeType.FullName).GetConstructor(Type.EmptyTypes));
+
+                        param.CustomAttributes.RemoveAt(j);
+
+                        param.CustomAttributes.Add(new CustomAttribute(ctorTypeReference));
+
+                    }
+                }
+            }
+
+
+            var body = template.Body;
+            for (int i = 0; i < body.Variables.Count; i++)
+            {
+                body.Variables[i].VariableType = Transform(body.Variables[i].VariableType, method.Module);
+            }
+
+            for (int i = 0; i < body.Instructions.Count; i++)
+            {
+                var operand = body.Instructions[i].Operand;
+
+                if (operand is null)
+                {
+                    continue;
+                }
+
+                if (operand is MethodReference copyToRef && copyToRef.Name.Contains("CopyTo"))
+                {
+                    var genericReference = module.ImportReference(copyToRef.Resolve());
+
+                    body.Instructions[i].Operand = genericReference.MakeGeneric(module.ImportReference(typeof(string)));
+                }
+                else if (operand is MethodReference methodReference)
+                {
+                    body.Instructions[i].Operand = Transform(methodReference, method.Module);
+                }
+
+                if (operand is TypeReference typeReference)
+                {
+                    body.Instructions[i].Operand = Transform(typeReference, method.Module);
+                }
+            }
+
+            foreach (var attr in method.CustomAttributes)
+            {
+                if (attr.AttributeType.FullName.Contains("DebuggerStepThrough") || attr.AttributeType.FullName.Contains("AsyncStateMachine"))
+                {
+                    continue;
+                }
+
+                template.CustomAttributes.Add(attr);
+            }
+
+            foreach (var attr in template.CustomAttributes)
+            {
+                method.CustomAttributes.Remove(attr);
+            }
+
+            template.DeclaringType = null;
+
+            method.DeclaringType.Methods.Add(template);
+
+            Transformed.Add(template.Name);
         }
 
         protected object Transform(MethodReference methodReference, ModuleDefinition moduleDefinition)
         {
-            //if (methodReference is MethodSpecification specification)
-            //{
-            //    return Transform(specification, moduleDefinition);
-            //}
-
             methodReference.DeclaringType = Transform(methodReference.DeclaringType, moduleDefinition);
             methodReference.ReturnType = Transform(methodReference.ReturnType, moduleDefinition);
             if (methodReference.HasParameters)

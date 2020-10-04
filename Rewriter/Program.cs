@@ -31,6 +31,8 @@ namespace Rewriter
             var factTransform = new FactTransformation(templateAssembly);
             var theoryTransform = new TheoryTransformation(templateAssembly);
 
+            var transforms = new XunitTransformation[] { new FactTransformation(templateAssembly), new TheoryTransformation(templateAssembly) };
+
             foreach (var module in testsAssembly.Modules)
             {
                 foreach (var type in module.Types)
@@ -39,7 +41,11 @@ namespace Rewriter
                     {
                         var method = type.Methods[i];
                         Console.WriteLine(method);
-                        theoryTransform.Apply(method);
+
+                        foreach (var transform in transforms)
+                        {
+                            transform.Apply(method);
+                        }
                     }
                 }
             }

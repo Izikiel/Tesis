@@ -23,20 +23,19 @@ namespace Rewriter
             : base(assemblyDefinition)
         { }
 
-        public override void Apply(MethodDefinition method)
+        protected override void InjectLambdaIntoTemplate(MethodDefinition template, MethodDefinition method)
         {
-            if (!this.DoesApply(method))
-            {
-                return;
-            }
-
             var module = method.Module;
 
             var parameters = method.Parameters.Select(def => Type.GetType(def.ParameterType.FullName)).ToArray();
 
             var lambdaMethodGenerator = new LambdaGenerator(method.Name, typeof(Task), parameters);
 
-            var generatedLambda = lambdaMethodGenerator.CompileClass();
+            // TODO: Pasar esto como parametro al constructor.
+            var compiledClassDestinationFolder = "D:/tesis/rewriteTest/test/bin/Debug/netcoreapp3.1/";
+
+            // TODO: Copiar la dll generada al mismo lugar que la dll que se modifica.
+            var generatedLambda = lambdaMethodGenerator.CompileClass(compiledClassDestinationFolder);
 
             var funcTaskConstructor = module.ImportReference(FuncConstructorGenerator.GetConstructorInfo(null));
 
@@ -45,8 +44,6 @@ namespace Rewriter
             var generatedLambdaConstructor = module.ImportReference(generatedLambda.GetConstructors().First());
 
             var toFuncTaskMethod = module.ImportReference(generatedLambda.GetMethod("ToFuncTask"));
-
-            var template = this.GetTemplateMethod();
 
             var ilProcessor = template.Body.GetILProcessor();
 
@@ -68,8 +65,6 @@ namespace Rewriter
             ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Newobj, funcTaskConstructor));
 
             ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Stloc_0));
-
-            
         }
     }
 }
