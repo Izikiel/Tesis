@@ -41,11 +41,11 @@ namespace GenerateLambdaRoslyn
             this.GeneratedClassName = $"GeneratedLambda_{this.MethodName}";
         }
 
-        public Type CompileClass()
+        public Type CompileClass(string destinationPath = ".")
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(this.GenerateCode());
+            var syntaxTree = SyntaxFactory.ParseSyntaxTree(this.GenerateCode(), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp8));
 
-            var assemblyName = $"{this.GeneratedClassName}.dll";
+            var assemblyName = $"{this.GeneratedClassName}";
             var references = new MetadataReference[]
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
@@ -59,7 +59,8 @@ namespace GenerateLambdaRoslyn
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
             using var ms = new MemoryStream();
-            var result = compilation.Emit(ms);
+            using var pdbMs = new MemoryStream();
+            var result = compilation.Emit(ms, pdbMs);
 
             if (!result.Success)
             {
@@ -76,10 +77,20 @@ namespace GenerateLambdaRoslyn
 
             ms.Seek(0, SeekOrigin.Begin);
 
-            File.WriteAllBytes(assemblyName, ms.ToArray());
-            var assembly = Assembly.LoadFile(Path.GetFullPath(assemblyName));
+            pdbMs.Seek(0, SeekOrigin.Begin);
 
-            return assembly.GetType(this.GeneratedClassName);
+            destinationPath += destinationPath[^1] == Path.DirectorySeparatorChar || destinationPath[^1] == Path.AltDirectorySeparatorChar ? "" : Path.DirectorySeparatorChar.ToString();
+
+            var dllPath = destinationPath + $"{assemblyName}.dll";
+            var pdbPath = destinationPath + $"{assemblyName}.pdb";
+
+            File.WriteAllBytes(dllPath, ms.ToArray());
+
+            File.WriteAllBytes(pdbPath, pdbMs.ToArray());
+
+            var assembly = Assembly.LoadFrom(dllPath);
+
+            return assembly.GetTypes().First(t => t.Name == this.GeneratedClassName);
         }
 
         public string GenerateCode()
@@ -95,18 +106,20 @@ namespace GenerateLambdaRoslyn
             string templateCode = @$"
                 using System;
                 using System.Threading.Tasks;
-                public class {this.GeneratedClassName}
-                {{ 
-                    private object[] args;
-                    private {methodType} method; 
-
-                    public {this.GeneratedClassName}({methodType} method, params object[] args)
+                namespace GeneratedLambdas{{
+                    public class {this.GeneratedClassName}
                     {{ 
-                        this.args = args;
-                        this.method = method;
-                    }}
+                        private object[] args;
+                        private {methodType} method; 
 
-                    public Task ToFuncTask() => this.method({argsBuilder});
+                        public {this.GeneratedClassName}({methodType} method, params object[] args)
+                        {{ 
+                            this.args = args;
+                            this.method = method;
+                        }}
+
+                        public Task ToFuncTask() => this.method({argsBuilder});
+                    }}
                 }}";
 
             return templateCode;
