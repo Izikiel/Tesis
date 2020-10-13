@@ -23,13 +23,11 @@ namespace Templates
 
             if (bugCount > 0)
             {
-                Console.WriteLine($"Found {bugCount} bugs");
-
                 var reports = new string[bugCount];
 
                 report.BugReports.CopyTo(reports);
 
-                Assert.True(false, $"Test failed. Errors: {string.Join(",", reports)}");
+                Assert.True(false, $"Test failed. Found {bugCount} bugs. Errors: {string.Join(",", reports)}");
             }
 
             Console.WriteLine("Test passed");
@@ -47,13 +45,11 @@ namespace Templates
 
             if (bugCount > 0)
             {
-                Console.WriteLine("Found {0} bugs", bugCount);
-
                 var reports = new string[bugCount];
 
                 report.BugReports.CopyTo(reports);
 
-                Assert.True(false, $"Test failed. Errors: {string.Join(",", reports)}");
+                Assert.True(false, $"Test failed. Found {bugCount} bugs. Errors: {string.Join(",", reports)}");
             }
 
             Console.WriteLine("Test passed");
