@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
+
 namespace GenerateLambdaRoslyn
 {
     public class TestWrapper
@@ -12,10 +13,10 @@ namespace GenerateLambdaRoslyn
         private readonly Type[] methodArgsTypes;
         private object instance;
 
-        public TestWrapper(Type objectType, object[] constructorArgs, string methodName, params object[] methodArgs)
+        public TestWrapper(Type objectType, string methodName, params object[] methodArgs)
         {
             this.objectType = objectType; // TODO: Check if it's IClassFixture<T> type. If so, try to get T, construct it, and pass it to the obj constructor.
-            this.constructorArgs = constructorArgs ?? new object[] { }; 
+            this.constructorArgs = null; // new object[] { };
             this.methodName = methodName;
             this.methodArgs = methodArgs ?? new object[] { };
 
@@ -33,16 +34,11 @@ namespace GenerateLambdaRoslyn
         {
             var methodToInvoke = this.objectType.GetMethod(this.methodName, this.methodArgsTypes);
 
-            if (methodToInvoke.ReturnType == typeof(Task))
-            {
-                this.instance = methodToInvoke.IsStatic ? null : Activator.CreateInstance(this.objectType, this.constructorArgs);
+            this.instance = methodToInvoke.IsStatic ? null : Activator.CreateInstance(this.objectType, this.constructorArgs);
 
-                var taskResult = (Task)methodToInvoke.Invoke(this.instance, this.methodArgs);
+            var taskResult = (Task)methodToInvoke.Invoke(this.instance, this.methodArgs);
 
-                return taskResult.ContinueWith(HandleDispose);
-            }
-
-            throw new ArgumentException($"Expected return type of the method is '{typeof(Task).FullName}', got {methodToInvoke.ReturnType.FullName}");
+            return taskResult.ContinueWith(HandleDispose);
         }
 
         public void HandleDispose(Task t)
