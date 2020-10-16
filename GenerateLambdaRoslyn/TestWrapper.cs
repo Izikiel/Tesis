@@ -7,7 +7,6 @@ namespace GenerateLambdaRoslyn
     public class TestWrapper
     {
         private readonly Type objectType;
-        private object[] constructorArgs;
         private readonly Type constructorArgsType;
         private readonly string methodName;
         private readonly object[] methodArgs;
@@ -34,12 +33,7 @@ namespace GenerateLambdaRoslyn
         {
             var iClassFixtureInstance = Array.Find(objectType.GetInterfaces(), i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IClassFixture<>));
 
-            if (iClassFixtureInstance is null)
-            {
-                return null;
-            }
-
-            return iClassFixtureInstance.GetGenericArguments()[0];
+            return iClassFixtureInstance?.GetGenericArguments()[0];
         }
 
         private object[] CreateConstructorArgs() => this.constructorArgsType is null ? null : new object[] { Activator.CreateInstance(this.constructorArgsType, Type.EmptyTypes) };
