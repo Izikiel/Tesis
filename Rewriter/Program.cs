@@ -1,19 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
-using MethodBody = Mono.Cecil.Cil.MethodBody;
 
 namespace Rewriter
 {
-    class Program
+    static class Program
     {
         static void Main(string[] args)
         {
-
             var filePath = "D:/tesis/rewriteTest/test/bin/Debug/netcoreapp3.1/test.dll";
 
             using var fileStream = File.Open(filePath, FileMode.Open);

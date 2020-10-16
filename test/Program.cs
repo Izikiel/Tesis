@@ -94,7 +94,6 @@ namespace test
             Console.WriteLine(greeter.Value);
 
             Assert.True(greeter.Value == Greeter.HelloWorld, $"Value is '{greeter.Value}' instead of '{Greeter.HelloWorld}'.");
-            Assert.True(false, "Estoy en la interna!");
         }
 
 

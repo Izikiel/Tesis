@@ -30,34 +30,27 @@ namespace GenerateLambdaRoslyn
             }
         }
 
-        public Task Invoke()
+        public async Task Invoke()
         {
-            var methodToInvoke = this.objectType.GetMethod(this.methodName, this.methodArgsTypes);
-
-            this.instance = methodToInvoke.IsStatic ? null : Activator.CreateInstance(this.objectType, this.constructorArgs);
-
-            var taskResult = (Task)methodToInvoke.Invoke(this.instance, this.methodArgs);
-
-            return taskResult.ContinueWith(HandleDispose);
-        }
-
-        public void HandleDispose(Task t)
-        {
-            if (this.instance is IDisposable disposable)
+            try
             {
-                disposable.Dispose();
+                var methodToInvoke = this.objectType.GetMethod(this.methodName, this.methodArgsTypes);
+
+                this.instance = methodToInvoke.IsStatic ? null : Activator.CreateInstance(this.objectType, this.constructorArgs);
+
+                await (Task)methodToInvoke.Invoke(this.instance, this.methodArgs);
             }
-
-            if (instance is IAsyncDisposable asyncDisposable)
+            finally
             {
-                asyncDisposable.DisposeAsync().AsTask().Wait();
-            }
+                if (this.instance is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
 
-            // We do this to ensure that the object is properly disposed and the
-            // original stack trace is not lost.
-            if (t.IsFaulted)
-            {
-                t.Wait();
+                else if (instance is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync();
+                }
             }
         }
     }

@@ -1,10 +1,10 @@
-﻿using Mono.Cecil;
+﻿using GenerateLambdaRoslyn;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 
 namespace Rewriter
 {
@@ -37,7 +37,40 @@ namespace Rewriter
                 .First(m => m.Name == this.TemplateMethodName);
         }
 
-        protected abstract void InjectLambdaIntoTemplate(MethodDefinition template, MethodDefinition method);
+        private void InjectLambdaIntoTemplate(MethodDefinition template, MethodDefinition method)
+        {
+            var module = method.Module;
+
+            var funcTaskConstructor = module.ImportReference(FuncConstructorGenerator.GetConstructorInfo(null));
+
+            var testWrapperConstructor = module.ImportReference(typeof(TestWrapper).GetConstructors()[0]);
+
+            var testWrapperInvokeReference = module.ImportReference(typeof(TestWrapper).GetMethod("Invoke"));
+
+            var typeofReference = module.ImportReference(typeof(Type).GetMethod("GetTypeFromHandle"));
+
+            var ilProcessor = template.Body.GetILProcessor();
+
+            ilProcessor.RemoveAt(0); // nop
+            ilProcessor.RemoveAt(0); // ldnull
+            ilProcessor.RemoveAt(0); // stloc.0
+
+            var firstInstruction = ilProcessor.Body.Instructions[0];
+
+            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Nop));
+
+            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Ldtoken, method.DeclaringType));
+            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Call, typeofReference));
+            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Ldstr, method.Name));
+            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(template.HasParameters ? OpCodes.Ldarg_0 : OpCodes.Ldnull));
+
+            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Newobj, testWrapperConstructor));
+            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Ldftn, testWrapperInvokeReference));
+
+            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Newobj, funcTaskConstructor));
+
+            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Stloc_0));
+        }
 
         protected bool DoesApply(MethodDefinition method)
         {
