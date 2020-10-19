@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GenerateLambdaRoslyn\GenerateLambdaRoslyn.csproj" />
+    <ProjectReference Include="..\TestWrappers\TestWrappers.csproj" />
   </ItemGroup>
 
   <ItemGroup>
