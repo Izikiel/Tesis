@@ -37,7 +37,7 @@ namespace Rewriter
                 .First(m => m.Name == this.TemplateMethodName);
         }
 
-        private void InjectLambdaIntoTemplate(MethodDefinition template, MethodDefinition method)
+        private void RewriteTemplate(MethodDefinition template, MethodDefinition method)
         {
             var module = method.Module;
 
@@ -149,7 +149,7 @@ namespace Rewriter
 
             var module = method.Module;
 
-            this.InjectLambdaIntoTemplate(template, method);
+            this.RewriteTemplate(template, method);
 
             for (int i = 0; i < template.Parameters.Count; i++)
             {
