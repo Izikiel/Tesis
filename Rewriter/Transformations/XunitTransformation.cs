@@ -7,30 +7,21 @@ using TestWrappers.XUnit;
 
 namespace Rewriter
 {
-    public abstract class XUnitTransformation
+    public class XUnitTransformation
     {
-        protected string TemplateModuleName => "TestWrappers.dll";
+        private const string TheoryAttributeName = "Xunit.TheoryAttribute";
 
-        protected string TemplateTypeName => "XUnitTestTemplates";
+        private const string FactAttributeName = "Xunit.FactAttribute";
 
-        protected virtual string TestAttributeName { get; }
+        private static HashSet<string> Transformed { get; } = new HashSet<string>();
 
-        protected AssemblyDefinition TemplatesAssembly { get; }
-
-        protected static HashSet<string> Transformed { get; set; } = new HashSet<string>();
-
-        protected XUnitTransformation(AssemblyDefinition assemblyDefinition)
-        {
-            this.TemplatesAssembly = assemblyDefinition;
-        }
-
-        private MethodDefinition WrapTestMethod(string wrapperName, MethodDefinition method)
+        public MethodDefinition WrapTestMethod(string wrapperName, MethodDefinition method)
         {
             var module = method.Module;
 
             var wrapper = new MethodDefinition(
                 wrapperName,
-                Mono.Cecil.MethodAttributes.Static | Mono.Cecil.MethodAttributes.Public,
+                MethodAttributes.Static | MethodAttributes.Public,
                 module.ImportReference(typeof(void)));
 
             var funcTaskConstructor = module.ImportReference(FuncConstructorGenerator.GetConstructorInfo(null));
@@ -140,7 +131,7 @@ namespace Rewriter
                 return false;
             }
 
-            return method.CustomAttributes.Any(a => a.AttributeType.FullName == this.TestAttributeName);
+            return method.CustomAttributes.Any(a => a.AttributeType.FullName == XUnitTransformation.FactAttributeName || a.AttributeType.FullName == XUnitTransformation.TheoryAttributeName);
         }
 
         public virtual void Apply(MethodDefinition method)
