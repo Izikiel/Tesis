@@ -97,7 +97,6 @@ namespace Rewriter
 
             ilProcessor.Append(ilProcessor.Create(OpCodes.Ldloc_0));
             var tryEnd = ilProcessor.Body.Instructions.Last();
-            var handlerStart = ilProcessor.Body.Instructions.Last();
 
             ilProcessor.Append(brfalse_s);
             ilProcessor.Append(ilProcessor.Create(OpCodes.Ldloc_0));
@@ -116,7 +115,7 @@ namespace Rewriter
             {
                 TryStart = tryStart,
                 TryEnd = tryEnd,
-                HandlerStart = handlerStart,
+                HandlerStart = tryEnd,
                 HandlerEnd = handlerEnd
             };
 
