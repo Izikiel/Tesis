@@ -2,10 +2,8 @@
 
 namespace Rewriter
 {
-    class TheoryTransformation : XunitTransformation
+    class TheoryTransformation : XUnitTransformation
     {
-        protected override string TemplateMethodName => "TheoryTemplate";
-
         protected override string TestAttributeName => "Xunit.TheoryAttribute";
 
         public TheoryTransformation(AssemblyDefinition assemblyDefinition)

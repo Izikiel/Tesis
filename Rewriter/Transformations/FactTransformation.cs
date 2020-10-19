@@ -2,10 +2,8 @@
 
 namespace Rewriter
 {
-    class FactTransformation : XunitTransformation
+    class FactTransformation : XUnitTransformation
     {
-        protected override string TemplateMethodName => "FactTemplate";
-
         protected override string TestAttributeName => "Xunit.FactAttribute";
 
         public FactTransformation(AssemblyDefinition assemblyDefinition)

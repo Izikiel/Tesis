@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Mono.Cecil;
 
@@ -22,7 +23,11 @@ namespace Rewriter
                 var factTransform = new FactTransformation(templateAssembly);
                 var theoryTransform = new TheoryTransformation(templateAssembly);
 
-                var transforms = new XunitTransformation[] { new FactTransformation(templateAssembly), new TheoryTransformation(templateAssembly) };
+                var transforms = new List<XUnitTransformation>
+                {
+                    factTransform,
+                    theoryTransform
+                };
 
                 foreach (var module in testsAssembly.Modules)
                 {
