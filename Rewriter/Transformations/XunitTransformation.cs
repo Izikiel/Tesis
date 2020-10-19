@@ -72,7 +72,7 @@ namespace Rewriter
             /* using XUnitTestWrapper xunitTestWrapper = new XUnitTestWrapper(typeof(method.DeclaringType), method.Name, method.HasParameters ? args : null)
              * {
              *     XUnitTestTemplates.RunTestInCoyote(new Func<Task>(xunitTestWrapper.Invoke);
-             * } 
+             * }
              */
 
             var lastRet = ilProcessor.Create(OpCodes.Ret);
@@ -83,7 +83,6 @@ namespace Rewriter
 
             var brfalse_s = ilProcessor.Create(OpCodes.Brfalse_S, endFinally);
 
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Nop));
             ilProcessor.Append(ilProcessor.Create(OpCodes.Ldtoken, method.DeclaringType));
             ilProcessor.Append(ilProcessor.Create(OpCodes.Call, typeofReference));
             ilProcessor.Append(ilProcessor.Create(OpCodes.Ldstr, method.Name));
@@ -102,7 +101,6 @@ namespace Rewriter
 
             ilProcessor.Append(ilProcessor.Create(OpCodes.Call, runInCoyoteReference));
 
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Nop));
 
             ilProcessor.Append(leaveS);
 
@@ -114,7 +112,6 @@ namespace Rewriter
 
             ilProcessor.Append(ilProcessor.Create(OpCodes.Callvirt, disposeReference));
 
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Nop));
 
             ilProcessor.Append(endFinally);
 
