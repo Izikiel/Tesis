@@ -1,10 +1,10 @@
-﻿using GenerateLambdaRoslyn;
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using TestWrappers.XUnit;
 
 namespace Rewriter
 {
@@ -12,9 +12,9 @@ namespace Rewriter
     {
         protected virtual string TemplateMethodName { get; }
 
-        protected virtual string TemplateModuleName { get; }
+        protected string TemplateModuleName => "TestWrappers.dll";
 
-        protected virtual string TemplateTypeName { get; }
+        protected string TemplateTypeName => "XUnitTestTemplates";
 
         protected virtual string TestAttributeName { get; }
 
@@ -43,33 +43,85 @@ namespace Rewriter
 
             var funcTaskConstructor = module.ImportReference(FuncConstructorGenerator.GetConstructorInfo(null));
 
-            var testWrapperConstructor = module.ImportReference(typeof(TestWrapper).GetConstructors()[0]);
+            var testWrapperConstructor = module.ImportReference(typeof(XUnitTestWrapper).GetConstructors()[0]);
 
-            var testWrapperInvokeReference = module.ImportReference(typeof(TestWrapper).GetMethod("Invoke"));
+            var testWrapperInvokeReference = module.ImportReference(typeof(XUnitTestWrapper).GetMethod("Invoke"));
 
             var typeofReference = module.ImportReference(typeof(Type).GetMethod("GetTypeFromHandle"));
 
+            var runInCoyoteReference = module.ImportReference(typeof(XUnitTestTemplates).GetMethod("RunTestInCoyote"));
+
+            var disposeReference = module.ImportReference(typeof(IDisposable).GetMethod("Dispose"));
+
             var ilProcessor = template.Body.GetILProcessor();
 
-            ilProcessor.RemoveAt(0); // nop
-            ilProcessor.RemoveAt(0); // ldnull
-            ilProcessor.RemoveAt(0); // stloc.0
+            ilProcessor.Body.Instructions.Clear();
 
-            var firstInstruction = ilProcessor.Body.Instructions[0];
+            // We are going to write the following:
+            /* using XUnitTestWrapper xunitTestWrapper = new XUnitTestWrapper(typeof(method.DeclaringType), method.Name, template.HasParameters ? args : null)
+             * {
+             *     XUnitTestTemplates.RunTestInCoyote(new Func<Task>(xunitTestWrapper.Invoke);
+             * } 
+             */
 
-            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Nop));
+            var lastRet = ilProcessor.Create(OpCodes.Ret);
 
-            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Ldtoken, method.DeclaringType));
-            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Call, typeofReference));
-            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Ldstr, method.Name));
-            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(template.HasParameters ? OpCodes.Ldarg_0 : OpCodes.Ldnull));
+            var leaveS = ilProcessor.Create(OpCodes.Leave_S, lastRet);
 
-            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Newobj, testWrapperConstructor));
-            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Ldftn, testWrapperInvokeReference));
+            var endFinally = ilProcessor.Create(OpCodes.Endfinally);
 
-            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Newobj, funcTaskConstructor));
+            var brfalse_s = ilProcessor.Create(OpCodes.Brfalse_S, endFinally);
 
-            ilProcessor.InsertBefore(firstInstruction, ilProcessor.Create(OpCodes.Stloc_0));
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Nop));
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldtoken, method.DeclaringType));
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Call, typeofReference));
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldstr, method.Name));
+            ilProcessor.Append(ilProcessor.Create(template.HasParameters ? OpCodes.Ldarg_0 : OpCodes.Ldnull));
+
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Newobj, testWrapperConstructor));
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Stloc_0));
+
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldloc_0));
+
+            var tryStart = ilProcessor.Body.Instructions.Last();
+
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldftn, testWrapperInvokeReference));
+
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Newobj, funcTaskConstructor));
+
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Call, runInCoyoteReference));
+
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Nop));
+
+            ilProcessor.Append(leaveS);
+
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldloc_0));
+            var tryEnd = ilProcessor.Body.Instructions.Last();
+            var handlerStart = ilProcessor.Body.Instructions.Last();
+
+            ilProcessor.Append(brfalse_s);
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldloc_0));
+
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Callvirt, disposeReference));
+
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Nop));
+
+            ilProcessor.Append(endFinally);
+
+            ilProcessor.Append(lastRet);
+
+            var handlerEnd = ilProcessor.Body.Instructions.Last();
+
+            var exceptionHandler = new ExceptionHandler(ExceptionHandlerType.Finally)
+            {
+                TryStart = tryStart,
+                TryEnd = tryEnd,
+                HandlerStart = handlerStart,
+                HandlerEnd = handlerEnd
+            };
+
+            template.Body.ExceptionHandlers.Clear();
+            template.Body.ExceptionHandlers.Add(exceptionHandler);
         }
 
         protected bool DoesApply(MethodDefinition method)

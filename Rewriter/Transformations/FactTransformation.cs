@@ -6,10 +6,6 @@ namespace Rewriter
     {
         protected override string TemplateMethodName => "FactTemplate";
 
-        protected override string TemplateModuleName => "CoyoteTemplates.dll";
-
-        protected override string TemplateTypeName => "CoyoteTemplates";
-
         protected override string TestAttributeName => "Xunit.FactAttribute";
 
         public FactTransformation(AssemblyDefinition assemblyDefinition)
