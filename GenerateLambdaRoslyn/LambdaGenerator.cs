@@ -1,25 +1,12 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace GenerateLambdaRoslyn
 {
-    public class LambdaGenerator
+    public class LambdaGenerator : CodeGenerator
     {
-        private string MethodName { get; }
-
-        private Type[] ArgumentTypes { get; }
-
-        private string GeneratedClassName { get; }
-
-        private Type GeneratedType { get; set; }
-
         public LambdaGenerator(string methodName, Type returnType, params object[] args)
             : this(methodName, returnType, args?.Select(a => a.GetType()).ToArray() ?? Array.Empty<Type>())
         { }
@@ -40,60 +27,8 @@ namespace GenerateLambdaRoslyn
             this.ArgumentTypes = argsTypes ?? Array.Empty<Type>();
             this.GeneratedClassName = $"GeneratedLambda_{this.MethodName}";
         }
-
-        public Type CompileClass(string destinationPath = ".")
-        {
-            var syntaxTree = SyntaxFactory.ParseSyntaxTree(this.GenerateCode(), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp8));
-
-            var assemblyName = $"{this.GeneratedClassName}";
-            var references = new MetadataReference[]
-            {
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(Task).Assembly.Location)
-            };
-
-            var compilation = CSharpCompilation.Create(
-                assemblyName,
-                syntaxTrees: new[] { syntaxTree },
-                references: references,
-                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-            using var ms = new MemoryStream();
-            using var pdbMs = new MemoryStream();
-            var result = compilation.Emit(ms, pdbMs);
-
-            if (!result.Success)
-            {
-                IEnumerable<Diagnostic> failures = result.Diagnostics.Where(diagnostic =>
-                    diagnostic.IsWarningAsError ||
-                    diagnostic.Severity == DiagnosticSeverity.Error);
-
-                foreach (Diagnostic diagnostic in failures)
-                {
-                    Console.Error.WriteLine("{0}: {1}", diagnostic.Id, diagnostic.GetMessage());
-                }
-                return default;
-            }
-
-            ms.Seek(0, SeekOrigin.Begin);
-
-            pdbMs.Seek(0, SeekOrigin.Begin);
-
-            destinationPath += destinationPath[^1] == Path.DirectorySeparatorChar || destinationPath[^1] == Path.AltDirectorySeparatorChar ? "" : Path.DirectorySeparatorChar.ToString();
-
-            var dllPath = destinationPath + $"{assemblyName}.dll";
-            var pdbPath = destinationPath + $"{assemblyName}.pdb";
-
-            File.WriteAllBytes(dllPath, ms.ToArray());
-
-            File.WriteAllBytes(pdbPath, pdbMs.ToArray());
-
-            var assembly = Assembly.LoadFrom(dllPath);
-
-            return assembly.GetTypes().First(t => t.Name == this.GeneratedClassName);
-        }
-
-        public string GenerateCode()
+        
+        protected override string GenerateCode()
         {
             var argsBuilder = new StringBuilder();
 
