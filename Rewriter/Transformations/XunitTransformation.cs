@@ -15,9 +15,18 @@ namespace Rewriter
 
         private static HashSet<string> Transformed { get; } = new HashSet<string>();
 
-        public MethodDefinition WrapTestMethod(string wrapperName, MethodDefinition method)
+        /// <summary>
+        /// Returns a new method definition which wraps the given method so that it is run
+        /// with Coyote. The method name will be modified.
+        /// </summary>
+        /// <param name="method">The method to wrap.</param>
+        /// <returns>A new method definition which wraps the given method.</returns>
+        public MethodDefinition WrapTestMethod(ref MethodDefinition method)
         {
             var module = method.Module;
+
+            var wrapperName = method.Name;
+            method.Name += "__inner";
 
             var wrapper = new MethodDefinition(
                 wrapperName,
@@ -52,7 +61,7 @@ namespace Rewriter
             {
                 argsLoadInstruction = ilProcessor.Create(OpCodes.Ldarg_0);
 
-                var argsParameter = new ParameterDefinition("args", Mono.Cecil.ParameterAttributes.None, method.Module.ImportReference(typeof(object[])));
+                var argsParameter = new ParameterDefinition("args", ParameterAttributes.None, method.Module.ImportReference(typeof(object[])));
 
                 var paramsAttributeCtor = module.ImportReference(typeof(ParamArrayAttribute).GetConstructor(Type.EmptyTypes));
                 argsParameter.CustomAttributes.Add(new CustomAttribute(paramsAttributeCtor));
@@ -68,7 +77,7 @@ namespace Rewriter
 
             var lastRet = ilProcessor.Create(OpCodes.Ret);
 
-            var leaveS = ilProcessor.Create(OpCodes.Leave_S, lastRet);
+            var leave_s = ilProcessor.Create(OpCodes.Leave_S, lastRet);
 
             var endFinally = ilProcessor.Create(OpCodes.Endfinally);
 
@@ -92,8 +101,7 @@ namespace Rewriter
 
             ilProcessor.Append(ilProcessor.Create(OpCodes.Call, runInCoyoteReference));
 
-
-            ilProcessor.Append(leaveS);
+            ilProcessor.Append(leave_s);
 
             ilProcessor.Append(ilProcessor.Create(OpCodes.Ldloc_0));
             var tryEnd = ilProcessor.Body.Instructions.Last();
@@ -102,7 +110,6 @@ namespace Rewriter
             ilProcessor.Append(ilProcessor.Create(OpCodes.Ldloc_0));
 
             ilProcessor.Append(ilProcessor.Create(OpCodes.Callvirt, disposeReference));
-
 
             ilProcessor.Append(endFinally);
 
@@ -124,7 +131,7 @@ namespace Rewriter
             return wrapper;
         }
 
-        protected bool DoesApply(MethodDefinition method)
+        private bool DoesApply(MethodDefinition method)
         {
             if (XUnitTransformation.Transformed.Contains(method.Name) || !method.HasCustomAttributes)
             {
@@ -134,16 +141,14 @@ namespace Rewriter
             return method.CustomAttributes.Any(a => a.AttributeType.FullName == XUnitTransformation.FactAttributeName || a.AttributeType.FullName == XUnitTransformation.TheoryAttributeName);
         }
 
-        public virtual void Apply(MethodDefinition method)
+        public void Apply(MethodDefinition method)
         {
             if (!this.DoesApply(method))
             {
                 return;
             }
 
-            var wrapperName = method.Name;
-            method.Name += "__inner";
-            var wrapper = this.WrapTestMethod(wrapperName, method);
+            var wrapper = this.WrapTestMethod(ref method);
 
             foreach (var attr in method.CustomAttributes)
             {
