@@ -1,16 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using CommandLine;
 using Mono.Cecil;
 
 namespace Rewriter
 {
     static class Program
     {
+        public class Options
+        {
+            [Option("test-dll-to-rewrite", HelpText = "Path to the DLL to rewrite")]
+            public string TestDllToRewrite { get; set; }
+        }
+
+
         static void Main(string[] args)
         {
-            const string filePath = "D:/tesis/rewriteTest/test/bin/Debug/netcoreapp3.1/test.dll";
-            const string templatesFilePath = "D:/tesis/rewriteTest/TestWrappers/bin/Debug/netcoreapp3.1/TestWrappers.dll";
+            const string templatesFilePath = "D:/tesis/rewriteTest/TestWrappers/bin/Debug/net5.0/TestWrappers.dll";
+
+            var filePath = string.Empty;
+
+            Parser.Default.ParseArguments<Options>(args)
+                   .WithParsed(o =>
+                   {
+                       if (!string.IsNullOrWhiteSpace(o.TestDllToRewrite))
+                       {
+                           filePath = o.TestDllToRewrite;
+                       }
+                   });
+
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new ArgumentException("Missing dll to rewrite");
+            }
 
             using var fileStream = File.Open(filePath, FileMode.Open);
 
@@ -30,11 +53,13 @@ namespace Rewriter
                     for (var i = 0; i < type.Methods.Count; i++)
                     {
                         var method = type.Methods[i];
-                        Console.WriteLine(method);
 
                         foreach (var transform in transforms)
                         {
-                            transform.Apply(method);
+                            if(transform.Apply(method))
+                            {
+                                Console.WriteLine($"Rewritten method: '{method}'");
+                            }
                         }
                     }
                 }

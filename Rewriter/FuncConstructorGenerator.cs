@@ -55,7 +55,7 @@ namespace Rewriter
 
         public static ConstructorInfo GetConstructorInfo(params Type[] argsForConstructor)
         {
-            argsForConstructor ??= Array.Empty<Type>();
+            argsForConstructor ??= Type.EmptyTypes;
 
             var funcType = FuncTypes[argsForConstructor.Length];
 

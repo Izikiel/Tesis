@@ -1,8 +1,8 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using TestWrappers;
 using TestWrappers.XUnit;
 
 namespace Rewriter
@@ -12,8 +12,6 @@ namespace Rewriter
         private const string TheoryAttributeName = "Xunit.TheoryAttribute";
 
         private const string FactAttributeName = "Xunit.FactAttribute";
-
-        private static HashSet<string> Transformed { get; } = new HashSet<string>();
 
         /// <summary>
         /// Returns a new method definition which wraps the given method so that it is run
@@ -27,6 +25,8 @@ namespace Rewriter
 
             var wrapperName = method.Name;
             method.Name += "__inner";
+            // TODO: Ver de conseguir el logger por reflection, hacer metodo de instancia si el 
+            // metodo que se esta reescribiendo no es static. instancia => instancia, static => static.
 
             var wrapper = new MethodDefinition(
                 wrapperName,
@@ -133,7 +133,9 @@ namespace Rewriter
 
         private bool DoesApply(MethodDefinition method)
         {
-            if (XUnitTransformation.Transformed.Contains(method.Name) || !method.HasCustomAttributes)
+            var rewrittenAttributeTypeFullName = typeof(XunitCoyoteRewrittenAttribute).FullName;
+
+            if (!method.HasCustomAttributes || method.CustomAttributes.Any(a => a.AttributeType.FullName == rewrittenAttributeTypeFullName))
             {
                 return false;
             }
@@ -141,11 +143,11 @@ namespace Rewriter
             return method.CustomAttributes.Any(a => a.AttributeType.FullName == XUnitTransformation.FactAttributeName || a.AttributeType.FullName == XUnitTransformation.TheoryAttributeName);
         }
 
-        public void Apply(MethodDefinition method)
+        public bool Apply(MethodDefinition method)
         {
             if (!this.DoesApply(method))
             {
-                return;
+                return false;
             }
 
             var wrapper = this.WrapTestMethod(ref method);
@@ -167,7 +169,17 @@ namespace Rewriter
 
             method.DeclaringType.Methods.Add(wrapper);
 
-            Transformed.Add(wrapper.Name);
+            XUnitTransformation.MarkAsRewritten(method);
+            XUnitTransformation.MarkAsRewritten(wrapper);
+
+            return true;
+        }
+
+        public static void MarkAsRewritten(MethodDefinition method)
+        {
+            var attributeConstructor = method.Module.ImportReference(typeof(XunitCoyoteRewrittenAttribute).GetConstructor(Type.EmptyTypes));
+
+            method.CustomAttributes.Add(new CustomAttribute(attributeConstructor));
         }
     }
 }

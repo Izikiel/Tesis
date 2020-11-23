@@ -11,7 +11,7 @@ namespace TestWrappers.XUnit
     {
         public static void RunTestInCoyote(Func<Task> toRun)
         {
-            var configuration = Configuration.Create().WithTestingIterations(1000).WithRandomStrategy();
+            var configuration = Configuration.Create().WithTestingIterations(300).WithRandomStrategy();
             var testingEngine = TestingEngine.Create(configuration, toRun);
             testingEngine.Run();
 
