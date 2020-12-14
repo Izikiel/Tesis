@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -13,10 +15,41 @@ namespace TestWrappers.XUnit
         private readonly object[] methodArgs;
         private readonly Type[] methodArgsTypes;
 
+        public XUnitTestWrapper(bool instanceFlag, object instance, string methodName, params object[] methodArgs)
+        {
+            this.objectType = instance.GetType();
+
+            this.constructorArgsTypes = this.GetConstructorArgsTypesFixture();
+
+            var constructorArgs = this.GetConstructorArgs(instance);
+
+            var generatedConstructorArgs = this.CreateConstructorArgs();
+
+            this.constructorArgs = new object[(generatedConstructorArgs?.Length ?? 0) + (constructorArgs?.Length ?? 0)];
+
+            Array.Copy(constructorArgs, 0, this.constructorArgs, 0, constructorArgs?.Length ?? 0);
+            Array.Copy(generatedConstructorArgs, 0, this.constructorArgs, constructorArgs?.Length ?? 0, generatedConstructorArgs?.Length ?? 0);
+
+            this.methodName = methodName;
+            this.methodArgs = methodArgs;
+            this.methodArgsTypes = Type.EmptyTypes;
+
+            var argsLength = this.methodArgs?.Length ?? 0;
+            if (argsLength > 0)
+            {
+                this.methodArgsTypes = new Type[argsLength];
+
+                for (var i = 0; i < argsLength; i++)
+                {
+                    this.methodArgsTypes[i] = this.methodArgs[i].GetType();
+                }
+            }
+        }
+
         public XUnitTestWrapper(Type objectType, string methodName, params object[] methodArgs)
         {
             this.objectType = objectType; // TODO: Check what to do regarding ICollectionFixture.
-            this.constructorArgsTypes = this.GetConstructorArgsTypes(objectType);
+            this.constructorArgsTypes = this.GetConstructorArgsTypesFixture();
             this.constructorArgs = this.CreateConstructorArgs();
             this.methodName = methodName;
             this.methodArgs = methodArgs;
@@ -34,9 +67,38 @@ namespace TestWrappers.XUnit
             }
         }
 
-        private Type[] GetConstructorArgsTypes(Type objectType)
+        private object[] GetConstructorArgs(object instance)
         {
-            var iClassFixtureInstances = Array.FindAll(objectType.GetInterfaces(), i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IClassFixture<>));
+            var fields = instance.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public);
+
+            var constructors = instance.GetType().GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+
+            var constructor = constructors.Length > 0 ? constructors[0] : null;
+
+            var constructorParameters = constructor?.GetParameters();
+
+            var constructorParametersValues = new List<object>();
+
+            foreach (var param in constructorParameters)
+            {
+                var paramFullName = param.ParameterType.FullName;
+
+                foreach (var field in fields)
+                {
+                    if (field.FieldType.FullName == paramFullName)
+                    {
+                        constructorParametersValues.Add(field.GetValue(instance));
+                    }
+                }
+            }
+
+            return constructorParametersValues.ToArray();
+
+        }
+
+        private Type[] GetConstructorArgsTypesFixture()
+        {
+            var iClassFixtureInstances = Array.FindAll(this.objectType.GetInterfaces(), i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IClassFixture<>));
 
             return Array.ConvertAll(iClassFixtureInstances, instance => instance.GetGenericArguments()[0]);
         }

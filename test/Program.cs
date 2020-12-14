@@ -15,13 +15,31 @@ namespace test
 {
     public class Program
     {
-        //ITestOutputHelper output;
+        ITestOutputHelper output;
 
-        //public Program(ITestOutputHelper output)
-        //{
-        //    this.output = output;
-        //}
+        public Greeter Greeter { get; }
 
+        public Program(ITestOutputHelper output)
+        {
+            this.output = output;
+            this.Greeter = new Greeter();
+        }
+
+        [Fact]
+        public async Task GreetTestInstance()
+        {
+            var task2 = this.Greeter.SayHelloWorld();
+            var task3 = this.Greeter.SayHelloWorld();
+            var task1 = this.Greeter.SayGoodMorning();
+            var task4 = this.Greeter.SayHelloWorld();
+            var task5 = this.Greeter.SayHelloWorld();
+
+            await Task.WhenAll(task1, task2, task3, task4, task5);
+
+            Console.WriteLine(this.Greeter.Value);
+
+            Assert.True(this.Greeter.Value == Greeter.HelloWorld, $"Value is '{this.Greeter.Value}' instead of '{Greeter.HelloWorld}'.");
+        }
 
         //public static void Main()
         //{
@@ -29,22 +47,22 @@ namespace test
         //    Console.WriteLine("hola!");
         //}
 
-        [Fact]
-        public static async Task GreetTest()
-        {
-            var greeter = new Greeter();
-            var task2 = greeter.SayHelloWorld();
-            var task3 = greeter.SayHelloWorld();
-            var task1 = greeter.SayGoodMorning();
-            var task4 = greeter.SayHelloWorld();
-            var task5 = greeter.SayHelloWorld();
+        //[Fact]
+        //public static async Task GreetTest()
+        //{
+        //    var greeter = new Greeter();
+        //    var task2 = greeter.SayHelloWorld();
+        //    var task3 = greeter.SayHelloWorld();
+        //    var task1 = greeter.SayGoodMorning();
+        //    var task4 = greeter.SayHelloWorld();
+        //    var task5 = greeter.SayHelloWorld();
 
-            await Task.WhenAll(task1, task2, task3, task4, task5);
+        //    await Task.WhenAll(task1, task2, task3, task4, task5);
 
-            Console.WriteLine(greeter.Value);
+        //    Console.WriteLine(greeter.Value);
 
-            Assert.True(greeter.Value == Greeter.HelloWorld, $"Value is '{greeter.Value}' instead of '{Greeter.HelloWorld}'.");
-        }
+        //    Assert.True(greeter.Value == Greeter.HelloWorld, $"Value is '{greeter.Value}' instead of '{Greeter.HelloWorld}'.");
+        //}
 
 
         //[Fact]
@@ -69,32 +87,32 @@ namespace test
         //    this.output.WriteLine("Test passed");
         //}
 
-        [Theory]
-        [InlineData(3, 4)]
-        [InlineData(3, 0)]
-        [InlineData(0, 1)]
-        public static async Task GreetTestTheory(int hello, int goodMorning)
-        {
-            var greeter = new Greeter();
+        //[Theory]
+        //[InlineData(3, 4)]
+        //[InlineData(3, 0)]
+        //[InlineData(0, 1)]
+        //public static async Task GreetTestTheory(int hello, int goodMorning)
+        //{
+        //    var greeter = new Greeter();
 
-            var tasks = new List<Task>();
+        //    var tasks = new List<Task>();
 
-            for (int i = 0; i < hello; i++)
-            {
-                tasks.Add(greeter.SayHelloWorld());
-            }
+        //    for (int i = 0; i < hello; i++)
+        //    {
+        //        tasks.Add(greeter.SayHelloWorld());
+        //    }
 
-            for (int i = 0; i < goodMorning; i++)
-            {
-                tasks.Add(greeter.SayGoodMorning());
-            }
+        //    for (int i = 0; i < goodMorning; i++)
+        //    {
+        //        tasks.Add(greeter.SayGoodMorning());
+        //    }
 
-            await Task.WhenAll(tasks);
+        //    await Task.WhenAll(tasks);
 
-            Console.WriteLine(greeter.Value);
+        //    Console.WriteLine(greeter.Value);
 
-            Assert.True(greeter.Value == Greeter.HelloWorld, $"Value is '{greeter.Value}' instead of '{Greeter.HelloWorld}'.");
-        }
+        //    Assert.True(greeter.Value == Greeter.HelloWorld, $"Value is '{greeter.Value}' instead of '{Greeter.HelloWorld}'.");
+        //}
 
 
         //[Theory]
