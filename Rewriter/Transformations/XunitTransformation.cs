@@ -62,15 +62,7 @@ namespace Rewriter
                 MethodAttributes.Public,
                 module.ImportReference(typeof(void)));
 
-            var funcTaskConstructor = module.ImportReference(FuncConstructorGenerator.GetConstructorInfo(null));
-
             var testWrapperConstructor = module.ImportReference(XUnitTransformation.GetInstanceConstructor(typeof(XUnitTestWrapper).GetConstructors()));
-
-            var testWrapperInvokeReference = module.ImportReference(typeof(XUnitTestWrapper).GetMethod("Invoke"));
-
-            var runInCoyoteReference = module.ImportReference(typeof(XUnitTestTemplates).GetMethod("RunTestInCoyote"));
-
-            var disposeReference = module.ImportReference(typeof(IDisposable).GetMethod("Dispose"));
 
             var ilProcessor = wrapper.Body.GetILProcessor();
 
@@ -102,60 +94,12 @@ namespace Rewriter
              * }
              */
 
-            var lastRet = ilProcessor.Create(OpCodes.Ret);
-
-            var leave_s = ilProcessor.Create(OpCodes.Leave_S, lastRet);
-
-            var endFinally = ilProcessor.Create(OpCodes.Endfinally);
-
-            var brfalse_s = ilProcessor.Create(OpCodes.Brfalse_S, endFinally);
-
             ilProcessor.Append(ilProcessor.Create(OpCodes.Ldc_I4_1)); // true
             ilProcessor.Append(ilProcessor.Create(OpCodes.Ldarg_0)); // this
             ilProcessor.Append(ilProcessor.Create(OpCodes.Ldstr, method.Name));
             ilProcessor.Append(argsLoadInstruction);
 
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Newobj, testWrapperConstructor));
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Stloc_0));
-
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldloc_0));
-
-            var tryStart = ilProcessor.Body.Instructions.Last();
-
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldftn, testWrapperInvokeReference));
-
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Newobj, funcTaskConstructor));
-
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Call, runInCoyoteReference));
-
-            ilProcessor.Append(leave_s);
-
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldloc_0));
-            var tryEnd = ilProcessor.Body.Instructions.Last();
-
-            ilProcessor.Append(brfalse_s);
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldloc_0));
-
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Callvirt, disposeReference));
-
-            ilProcessor.Append(endFinally);
-
-            ilProcessor.Append(lastRet);
-
-            var handlerEnd = ilProcessor.Body.Instructions.Last();
-
-            var exceptionHandler = new ExceptionHandler(ExceptionHandlerType.Finally)
-            {
-                TryStart = tryStart,
-                TryEnd = tryEnd,
-                HandlerStart = tryEnd,
-                HandlerEnd = handlerEnd
-            };
-
-            wrapper.Body.ExceptionHandlers.Clear();
-            wrapper.Body.ExceptionHandlers.Add(exceptionHandler);
-
-            return wrapper;
+            return WrapperBody(wrapper, testWrapperConstructor, ilProcessor, module);
         }
 
 
@@ -166,8 +110,6 @@ namespace Rewriter
                 MethodAttributes.Static | MethodAttributes.Public,
                 module.ImportReference(typeof(void)));
 
-            var funcTaskConstructor = module.ImportReference(FuncConstructorGenerator.GetConstructorInfo(null));
-
             var constructors = typeof(XUnitTestWrapper).GetConstructors();
 
             var instanceConstructor = XUnitTransformation.GetInstanceConstructor(constructors);
@@ -176,13 +118,7 @@ namespace Rewriter
 
             var testWrapperConstructor = module.ImportReference(staticConstructor);
 
-            var testWrapperInvokeReference = module.ImportReference(typeof(XUnitTestWrapper).GetMethod("Invoke"));
-
             var typeofReference = module.ImportReference(typeof(Type).GetMethod("GetTypeFromHandle"));
-
-            var runInCoyoteReference = module.ImportReference(typeof(XUnitTestTemplates).GetMethod("RunTestInCoyote"));
-
-            var disposeReference = module.ImportReference(typeof(IDisposable).GetMethod("Dispose"));
 
             var ilProcessor = wrapper.Body.GetILProcessor();
 
@@ -214,6 +150,20 @@ namespace Rewriter
              * }
              */
 
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldtoken, method.DeclaringType));
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Call, typeofReference));
+            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldstr, method.Name));
+            ilProcessor.Append(argsLoadInstruction);
+            return WrapperBody(wrapper, testWrapperConstructor, ilProcessor, module);
+        }
+
+        private static MethodDefinition WrapperBody(MethodDefinition wrapper, MethodReference testWrapperConstructor,  ILProcessor ilProcessor, ModuleDefinition module)
+        {
+            var funcTaskConstructor = module.ImportReference(FuncConstructorGenerator.GetConstructorInfo(null));
+            var testWrapperInvokeReference = module.ImportReference(typeof(XUnitTestWrapper).GetMethod("Invoke"));
+            var runInCoyoteReference = module.ImportReference(typeof(XUnitTestTemplates).GetMethod("RunTestInCoyote"));
+            var disposeReference = module.ImportReference(typeof(IDisposable).GetMethod("Dispose"));
+
             var lastRet = ilProcessor.Create(OpCodes.Ret);
 
             var leave_s = ilProcessor.Create(OpCodes.Leave_S, lastRet);
@@ -221,11 +171,6 @@ namespace Rewriter
             var endFinally = ilProcessor.Create(OpCodes.Endfinally);
 
             var brfalse_s = ilProcessor.Create(OpCodes.Brfalse_S, endFinally);
-
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldtoken, method.DeclaringType));
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Call, typeofReference));
-            ilProcessor.Append(ilProcessor.Create(OpCodes.Ldstr, method.Name));
-            ilProcessor.Append(argsLoadInstruction);
 
             ilProcessor.Append(ilProcessor.Create(OpCodes.Newobj, testWrapperConstructor));
             ilProcessor.Append(ilProcessor.Create(OpCodes.Stloc_0));
