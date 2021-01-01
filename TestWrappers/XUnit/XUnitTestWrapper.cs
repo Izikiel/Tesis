@@ -8,6 +8,9 @@ namespace TestWrappers.XUnit
 {
     public class XUnitTestWrapper : IDisposable
     {
+        private static readonly Type VoidType = typeof(void);
+        private static readonly Type TaskType = typeof(Task);
+
         private readonly Type objectType;
         private readonly Type[] constructorArgsTypes;
         private readonly object[] constructorArgs;
@@ -124,12 +127,12 @@ namespace TestWrappers.XUnit
                     instance = Activator.CreateInstance(this.objectType, this.constructorArgs);
                 }
 
-                if (methodToInvoke.ReturnType == typeof(void))
+                if (methodToInvoke.ReturnType == XUnitTestWrapper.VoidType)
                 {
                     methodToInvoke.Invoke(instance, this.methodArgs);
                 }
 
-                else if (methodToInvoke.ReturnType == typeof(Task))
+                else if (methodToInvoke.ReturnType == XUnitTestWrapper.TaskType)
                 {
                     await ((Task)methodToInvoke.Invoke(instance, this.methodArgs)).ConfigureAwait(false);
                 }
