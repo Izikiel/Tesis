@@ -124,7 +124,15 @@ namespace TestWrappers.XUnit
                     instance = Activator.CreateInstance(this.objectType, this.constructorArgs);
                 }
 
-                await (Task)methodToInvoke.Invoke(instance, this.methodArgs);
+                if (methodToInvoke.ReturnType == typeof(void))
+                {
+                    methodToInvoke.Invoke(instance, this.methodArgs);
+                }
+
+                else if (methodToInvoke.ReturnType == typeof(Task))
+                {
+                    await ((Task)methodToInvoke.Invoke(instance, this.methodArgs)).ConfigureAwait(false);
+                }
             }
             finally
             {
@@ -134,13 +142,26 @@ namespace TestWrappers.XUnit
                 }
                 else if (instance is IAsyncDisposable asyncDisposable)
                 {
-                    await asyncDisposable.DisposeAsync();
+                    await asyncDisposable.DisposeAsync().ConfigureAwait(false);
                 }
             }
         }
 
         public void Dispose()
         {
+            // Dispose of unmanaged resources.
+            this.Dispose(true);
+            // Suppress finalization.
+            GC.SuppressFinalize(this);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (!disposing)
+            {
+                return;
+            }
+
             for (int i = 0; i < this.constructorArgs?.Length; i++)
             {
                 if (this.constructorArgs[i] is IDisposable disposableArg)
