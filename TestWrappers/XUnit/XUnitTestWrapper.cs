@@ -14,11 +14,10 @@ namespace TestWrappers.XUnit
         private readonly Type objectType;
         private readonly Type[] constructorArgsTypes;
         private readonly object[] constructorArgs;
-        private readonly string methodName;
         private readonly object[] methodArgs;
-        private readonly Type[] methodArgsTypes;
+        private readonly MethodInfo methodToInvoke;
 
-        public XUnitTestWrapper(bool instanceFlag, object instance, string methodName, params object[] methodArgs)
+        public XUnitTestWrapper(bool _, object instance, string methodName, params object[] methodArgs)
         {
             this.objectType = instance.GetType();
 
@@ -33,20 +32,21 @@ namespace TestWrappers.XUnit
             Array.Copy(constructorArgs, 0, this.constructorArgs, 0, constructorArgs?.Length ?? 0);
             Array.Copy(generatedConstructorArgs, 0, this.constructorArgs, constructorArgs?.Length ?? 0, generatedConstructorArgs?.Length ?? 0);
 
-            this.methodName = methodName;
             this.methodArgs = methodArgs;
-            this.methodArgsTypes = Type.EmptyTypes;
+            var methodArgsTypes = Type.EmptyTypes;
 
             var argsLength = this.methodArgs?.Length ?? 0;
             if (argsLength > 0)
             {
-                this.methodArgsTypes = new Type[argsLength];
+                methodArgsTypes = new Type[argsLength];
 
                 for (var i = 0; i < argsLength; i++)
                 {
-                    this.methodArgsTypes[i] = this.methodArgs[i].GetType();
+                    methodArgsTypes[i] = this.methodArgs[i].GetType();
                 }
             }
+
+            this.methodToInvoke = this.objectType.GetMethod(methodName, methodArgsTypes);
         }
 
         public XUnitTestWrapper(Type objectType, string methodName, params object[] methodArgs)
@@ -54,20 +54,21 @@ namespace TestWrappers.XUnit
             this.objectType = objectType; // TODO: Check what to do regarding ICollectionFixture.
             this.constructorArgsTypes = this.GetConstructorArgsTypesFixture();
             this.constructorArgs = this.CreateConstructorArgs();
-            this.methodName = methodName;
             this.methodArgs = methodArgs;
-            this.methodArgsTypes = Type.EmptyTypes;
+            var methodArgsTypes = Type.EmptyTypes;
 
             var argsLength = this.methodArgs?.Length ?? 0;
             if (argsLength > 0)
             {
-                this.methodArgsTypes = new Type[argsLength];
+                methodArgsTypes = new Type[argsLength];
 
                 for (var i = 0; i < argsLength; i++)
                 {
-                    this.methodArgsTypes[i] = this.methodArgs[i].GetType();
+                    methodArgsTypes[i] = this.methodArgs[i].GetType();
                 }
             }
+
+            this.methodToInvoke = this.objectType.GetMethod(methodName, methodArgsTypes);
         }
 
         private object[] GetConstructorArgs(object instance)
@@ -96,7 +97,6 @@ namespace TestWrappers.XUnit
             }
 
             return constructorParametersValues.ToArray();
-
         }
 
         private Type[] GetConstructorArgsTypesFixture()
@@ -120,21 +120,19 @@ namespace TestWrappers.XUnit
             object instance = null;
             try
             {
-                var methodToInvoke = this.objectType.GetMethod(this.methodName, this.methodArgsTypes);
-
-                if (!methodToInvoke.IsStatic)
+                if (!this.methodToInvoke.IsStatic)
                 {
                     instance = Activator.CreateInstance(this.objectType, this.constructorArgs);
                 }
 
-                if (methodToInvoke.ReturnType == XUnitTestWrapper.VoidType)
+                if (this.methodToInvoke.ReturnType == XUnitTestWrapper.VoidType)
                 {
-                    methodToInvoke.Invoke(instance, this.methodArgs);
+                    this.methodToInvoke.Invoke(instance, this.methodArgs);
                 }
 
-                else if (methodToInvoke.ReturnType == XUnitTestWrapper.TaskType)
+                else if (this.methodToInvoke.ReturnType == XUnitTestWrapper.TaskType)
                 {
-                    await ((Task)methodToInvoke.Invoke(instance, this.methodArgs)).ConfigureAwait(false);
+                    await ((Task)this.methodToInvoke.Invoke(instance, this.methodArgs)).ConfigureAwait(false);
                 }
             }
             finally
