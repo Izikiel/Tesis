@@ -1,6 +1,7 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using TestWrappers;
@@ -224,7 +225,27 @@ namespace Rewriter
                 return false;
             }
 
-            return method.CustomAttributes.Any(a => a.AttributeType.FullName == XUnitTransformation.FactAttributeName || a.AttributeType.FullName == XUnitTransformation.TheoryAttributeName);
+            return method.CustomAttributes.Any(a =>
+            {
+                var inheritedTypes = XUnitTransformation.InheritanceChain(a.AttributeType.Resolve());
+                return inheritedTypes.Contains(XUnitTransformation.FactAttributeName) || inheritedTypes.Contains(XUnitTransformation.TheoryAttributeName);
+            });
+        }
+
+        private static HashSet<string> InheritanceChain(TypeDefinition typeDefinition)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            while (typeDefinition != null)
+            {
+                set.Add(typeDefinition.FullName);
+
+                if (typeDefinition.BaseType == null)
+                    break;
+
+                typeDefinition = typeDefinition.BaseType.Resolve();
+            }
+
+            return set;
         }
 
         public bool Apply(MethodDefinition method)
