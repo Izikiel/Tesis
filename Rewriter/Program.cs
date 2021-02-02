@@ -37,6 +37,8 @@ namespace Rewriter
 
             using var fileStream = File.Open(filePath, FileMode.Open);
 
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(filePath));
+
             var testsAssembly = AssemblyDefinition.ReadAssembly(fileStream, new ReaderParameters(ReadingMode.Immediate));
 
             Console.WriteLine($"{testsAssembly}");
