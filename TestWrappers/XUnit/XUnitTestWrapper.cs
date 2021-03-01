@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
@@ -14,7 +16,7 @@ namespace TestWrappers.XUnit
         private readonly Type objectType;
         private readonly Type[] constructorArgsTypes;
         private readonly object[] constructorArgs;
-        private readonly object[] methodArgs;
+        private object[] methodArgs;
         private readonly MethodInfo methodToInvoke;
 
         public XUnitTestWrapper(bool _, object instance, string methodName, params object[] methodArgs)
@@ -46,7 +48,7 @@ namespace TestWrappers.XUnit
                 }
             }
 
-            this.methodToInvoke = this.objectType.GetMethod(methodName, methodArgsTypes);
+            this.methodToInvoke = this.GetMethod(methodName, methodArgsTypes) ?? throw new ArgumentException($"Can't find method {methodName} with given args");
         }
 
         public XUnitTestWrapper(Type objectType, string methodName, params object[] methodArgs)
@@ -64,11 +66,38 @@ namespace TestWrappers.XUnit
 
                 for (var i = 0; i < argsLength; i++)
                 {
-                    methodArgsTypes[i] = this.methodArgs[i].GetType();
+                    methodArgsTypes[i] = this.methodArgs[i]?.GetType() ?? typeof(object);
                 }
             }
 
-            this.methodToInvoke = this.objectType.GetMethod(methodName, methodArgsTypes);
+            this.methodToInvoke = this.GetMethod(methodName, methodArgsTypes) ?? throw new ArgumentException($"Can't find method {methodName} with given args");
+        }
+
+        private MethodInfo GetMethod(string methodName, Type[] methodArgsTypes)
+        {
+            var method = this.objectType.GetMethod(methodName, methodArgsTypes);
+
+            if (method is null && methodArgsTypes.Length > 0)
+            {
+                var objectFullName = typeof(object).FullName;
+                var allTheSameType = methodArgsTypes.Select(t => t.FullName).Where(t => t != objectFullName).ToHashSet().Count == 1;
+                if (allTheSameType)
+                {
+                    var type = methodArgsTypes[0];
+                    var arrayType = Type.GetType(type.FullName + "[]");
+                    method = this.objectType.GetMethod(methodName, new Type[] { arrayType });
+
+                    var methodArgsArrayed = Array.CreateInstance(type, this.methodArgs.Length);
+                    for (int i = 0; i < this.methodArgs.Length; i++)
+                    {
+                        methodArgsArrayed.SetValue(this.methodArgs[i], i);
+                    }
+
+                    this.methodArgs = new object[] { methodArgsArrayed };
+                }
+            }
+
+            return method ?? throw new ArgumentException($"Can't find method {methodName} with given args");
         }
 
         private object[] GetConstructorArgs(object instance)
