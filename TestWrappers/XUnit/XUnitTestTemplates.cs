@@ -11,7 +11,7 @@ namespace TestWrappers.XUnit
     {
         public static void RunTestInCoyote(Func<Task> toRun)
         {
-            var configuration = Configuration.Create().WithTestingIterations(300).WithRandomStrategy();
+            var configuration = Configuration.Create().WithTestingIterations(50).WithRandomStrategy();
             var testingEngine = TestingEngine.Create(configuration, toRun);
             testingEngine.Run();
 
@@ -24,7 +24,10 @@ namespace TestWrappers.XUnit
 
                 report.BugReports.CopyTo(reports);
 
-                Assert.True(false, $"Test failed. Found {bugCount} bugs. Errors: {string.Join(",", reports)}");
+                var message = $"Test failed. Found {bugCount} bugs. Errors: {string.Join(",", reports)}" + "\n";
+                message += report.GetText(configuration);
+
+                Assert.True(false, message);
             }
 
             Console.WriteLine("Test passed");
