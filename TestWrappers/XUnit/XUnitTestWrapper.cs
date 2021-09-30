@@ -27,12 +27,18 @@ namespace TestWrappers.XUnit
 
             var constructorArgs = this.GetConstructorArgs(instance);
 
-            var generatedConstructorArgs = this.CreateConstructorArgs();
-
-            this.constructorArgs = new object[(generatedConstructorArgs?.Length ?? 0) + (constructorArgs?.Length ?? 0)];
-
-            Array.Copy(constructorArgs, 0, this.constructorArgs, 0, constructorArgs?.Length ?? 0);
-            Array.Copy(generatedConstructorArgs, 0, this.constructorArgs, constructorArgs?.Length ?? 0, generatedConstructorArgs?.Length ?? 0);
+            if ((constructorArgs?.Length ?? 0) == 0)
+            {
+                var generatedConstructorArgs = this.CreateConstructorArgs();
+                this.constructorArgs = new object[generatedConstructorArgs?.Length ?? 0];
+                Array.Copy(generatedConstructorArgs, 0, this.constructorArgs, constructorArgs?.Length ?? 0, generatedConstructorArgs?.Length ?? 0);
+                
+            }
+            else
+            {
+                this.constructorArgs = new object[constructorArgs?.Length ?? 0];
+                Array.Copy(constructorArgs, 0, this.constructorArgs, 0, constructorArgs?.Length ?? 0);
+            }
 
             this.methodArgs = methodArgs;
             var methodArgsTypes = Type.EmptyTypes;
