@@ -11,7 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Diagnostics;
 
-namespace test
+namespace ProgramCode
 {
     public class Program
     {
@@ -40,6 +40,15 @@ namespace test
 
             Assert.True(this.Greeter.Value == Greeter.HelloWorld, $"Value is '{this.Greeter.Value}' instead of '{Greeter.HelloWorld}'.");
         }
+
+        [Fact]
+        public async Task OperateTest()
+        {
+            var result = await new Test().Operate().ConfigureAwait(false);
+
+            Assert.True(result, "Result is not true");
+        }
+
 
         //public static void Main()
         //{
